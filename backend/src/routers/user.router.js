@@ -7,7 +7,7 @@ import { UserModel } from '../models/user.model.js';
 import bcrypt from 'bcryptjs';
 import auth from '../middleware/auth.mid.js';
 import admin from '../middleware/admin.mid.js';
-const PASSWORD_HASH_SALT_ROUNDS = process.env.SALT_ROUNDS;
+const PASSWORD_HASH_SALT_ROUNDS = 10;
 
 router.post(
   '/login',
@@ -109,6 +109,25 @@ router.get(
   })
 );
 
+// router.put(
+//   '/toggleBlock/:userId',
+//   admin,
+//   handler(async (req, res) => {
+//     const { userId } = req.params;
+
+//     if (userId === req.user.id) {
+//       res.status(BAD_REQUEST).send("Can't block yourself!");
+//       return;
+//     }
+
+//     const user = await UserModel.findById(userId);
+//     user.isBlocked = !user.isBlocked;
+//     user.save();
+
+//     res.send(user.isBlocked);
+//   })
+// );
+
 router.put(
   '/toggleBlock/:userId',
   admin,
@@ -116,17 +135,26 @@ router.put(
     const { userId } = req.params;
 
     if (userId === req.user.id) {
-      res.status(BAD_REQUEST).send("Can't block yourself!");
-      return;
+      return res.status(BAD_REQUEST).send("Can't block yourself!");
     }
 
-    const user = await UserModel.findById(userId);
-    user.isBlocked = !user.isBlocked;
-    user.save();
+    try {
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        return res.status(BAD_REQUEST).send('User not found!');
+      }
 
-    res.send(user.isBlocked);
+      user.isBlocked = !user.isBlocked;
+      await user.save();
+
+      res.send(user.isBlocked);
+    } catch (error) {
+      console.error('Error toggling block status:', error);
+      res.status(500).send('Server error');
+    }
   })
 );
+
 
 router.get(
   '/getById/:userId',
